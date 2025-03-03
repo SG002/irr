@@ -1,5 +1,6 @@
-<!DOCTYPE html>
-<html lang="en">
+<!DOCTYPE
+html >
+  <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -12,6 +13,15 @@
             --card-background: #ffffff;
             --text-color: #264653;
             --error-color: #e76f51;
+            
+            /* Status colors */
+            --status-low: #e63946;
+            --status-moderate: #f4a261;
+            --status-high: #2a9d8f;
+            --status-very-high: #2a9d8f;
+            --status-optimal: #2a9d8f;
+            --status-suboptimal: #f4a261;
+            --status-poor: #e63946;
         }
 
         * {
@@ -204,10 +214,152 @@
         .data-label {
             font-weight: 600;
             margin-bottom: 5px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
 
         .data-value {
             font-size: 18px;
+            margin-bottom: 10px;
+        }
+
+        /* New styles for status indicators */
+        .status-badge {
+            font-size: 12px;
+            padding: 3px 8px;
+            border-radius: 12px;
+            color: white;
+            font-weight: 600;
+            display: inline-block;
+        }
+
+        .status-low {
+            background-color: var(--status-low);
+        }
+
+        .status-moderate {
+            background-color: var(--status-moderate);
+        }
+
+        .status-high {
+            background-color: var(--status-high);
+        }
+
+        .status-very-high {
+            background-color: var(--status-very-high);
+        }
+
+        .status-optimal {
+            background-color: var(--status-optimal);
+        }
+
+        .status-suboptimal {
+            background-color: var(--status-suboptimal);
+        }
+
+        .status-poor {
+            background-color: var(--status-poor);
+        }
+
+        /* Gauge styles */
+        .gauge-container {
+            position: relative;
+            height: 8px;
+            background-color: #e9ecef;
+            border-radius: 4px;
+            overflow: hidden;
+            margin-bottom: 5px;
+        }
+
+        .gauge-fill {
+            height: 100%;
+            border-radius: 4px;
+            transition: width 0.5s ease-in-out;
+        }
+
+        .gauge-markers {
+            position: relative;
+            height: 15px;
+            margin-bottom: 10px;
+        }
+
+        .gauge-marker {
+            position: absolute;
+            width: 2px;
+            height: 8px;
+            background-color: #adb5bd;
+            top: 0;
+        }
+
+        .gauge-marker-label {
+            position: absolute;
+            font-size: 10px;
+            color: #6c757d;
+            top: 8px;
+            transform: translateX(-50%);
+        }
+
+        .constraints-info {
+            font-size: 12px;
+            color: #6c757d;
+            margin-top: 5px;
+            font-style: italic;
+        }
+
+        /* Info icon and tooltip styles */
+        .info-icon {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background-color: var(--primary-color);
+            color: white;
+            font-size: 12px;
+            font-weight: bold;
+            cursor: help;
+            margin-left: 8px;
+            position: relative;
+        }
+
+        .tooltip {
+            visibility: hidden;
+            position: absolute;
+            width: 300px;
+            background-color: #333;
+            color: #fff;
+            text-align: left;
+            border-radius: 6px;
+            padding: 10px;
+            z-index: 1;
+            bottom: 125%;
+            left: 50%;
+            transform: translateX(-50%);
+            opacity: 0;
+            transition: opacity 0.3s;
+            font-weight: normal;
+            font-style: normal;
+            font-size: 12px;
+            line-height: 1.4;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .tooltip::after {
+            content: "";
+            position: absolute;
+            top: 100%;
+            left: 50%;
+            margin-left: -5px;
+            border-width: 5px;
+            border-style: solid;
+            border-color: #333 transparent transparent transparent;
+        }
+
+        .info-icon:hover .tooltip {
+            visibility: visible;
+            opacity: 1;
         }
 
         .spinner {
@@ -312,14 +464,14 @@
             <div class="results-card">
                 <h2 class="card-title">Solar Irradiance Results</h2>
                 <div class="data-grid" id="irradianceData">
-                    <!-- Data will be populated here dynamically -->
+                    
                 </div>
             </div>
 
             <div class="results-card">
                 <h2 class="card-title">Location Information</h2>
                 <div class="data-grid" id="locationData">
-                    <!-- Location data will be populated here dynamically -->
+                    
                 </div>
             </div>
         </div>
@@ -330,7 +482,7 @@
     </footer>
 
     <script>
-        // DOM Elements
+        
         const form = document.getElementById('solarDataForm');
         const tabs = document.querySelectorAll('.tab');
         const tabContents = document.querySelectorAll('.tab-content');
@@ -353,29 +505,53 @@
         const displayLat = document.getElementById('displayLat');
         const displayLng = document.getElementById('displayLng');
 
-        // Set default dates (current year)
+        
+        const constraints = {
+            solarIrradiance: {
+                low: { max: 2.6, label: 'Low', color: 'var(--status-low)' },
+                moderate: { min: 2.6, max: 3, label: 'Moderate', color: 'var(--status-moderate)' },
+                high: { min: 3, max: 4, label: 'High', color: 'var(--status-high)' },
+                veryHigh: { min: 4, label: 'Optimal', color: 'var(--status-very-high)' }
+            },
+            clearnessIndex: {
+                poor: { max: 0.25, label: 'Poor', color: 'var(--status-poor)' },
+                suboptimal: { min: 0.25, max: 0.5, label: 'Suboptimal', color: 'var(--status-suboptimal)' },
+                optimal: { min: 0.5, max: 0.75, label: 'Optimal', color: 'var(--status-optimal)' },
+                extreme: { min: 0.75, label: 'Extreme', color: 'var(--status-very-high)' }
+            },
+            temperature: {
+                cold: { max: 15, label: 'Cold', color: 'var(--status-low)' },
+                cool: { min: 15, max: 20, label: 'Cool', color: 'var(--status-suboptimal)' },
+                optimal: { min: 20, max: 30, label: 'Optimal', color: 'var(--status-optimal)' },
+                hot: { min: 30, label: 'Hot', color: 'var(--status-high)' }
+            },
+            windSpeed: {
+                low: { max: 3, label: 'Low', color: 'var(--status-low)' },
+                moderate: { min: 3, max: 6, label: 'Moderate', color: 'var(--status-moderate)' },
+                high: { min: 6, max: 100, label: 'High', color: 'var(--status-high)' }
+            }
+        };
+
+        
         const currentYear = new Date().getFullYear();
         startDateInput.value = `${currentYear}-01-01`;
         endDateInput.value = `${currentYear}-12-31`;
 
-        // Tab switching functionality
+        
         tabs.forEach(tab => {
             tab.addEventListener('click', () => {
-                // Remove active class from all tabs and contents
+                
                 tabs.forEach(t => t.classList.remove('active'));
                 tabContents.forEach(c => c.classList.remove('active'));
                 
-                // Add active class to clicked tab and corresponding content
                 tab.classList.add('active');
                 const tabId = tab.getAttribute('data-tab');
                 document.getElementById(tabId).classList.add('active');
                 
-                // Reset form validation
                 clearErrors();
             });
         });
 
-        // Clear all error messages
         function clearErrors() {
             locationError.textContent = '';
             latitudeError.textContent = '';
@@ -384,14 +560,11 @@
             endDateError.textContent = '';
         }
 
-        // Geocode location to get coordinates
         async function geocodeLocation(locationName) {
             try {
-                // Show loading spinner
                 spinner.style.display = 'block';
                 fetchButton.disabled = true;
                 
-                // Use OpenStreetMap Nominatim API for geocoding
                 const encodedLocation = encodeURIComponent(locationName);
                 const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodedLocation}&limit=1`;
                 
@@ -421,70 +594,67 @@
             } catch (error) {
                 throw error;
             } finally {
-                // Hide spinner (will be shown again during API fetch)
+                
                 spinner.style.display = 'none';
                 fetchButton.disabled = false;
             }
         }
 
-        // Form Validation
-        // In the form validation function (validateForm), modify the validation logic:
-function validateForm() {
-    let isValid = true;
-    clearErrors();
-    
-    // Get active tab
-    const activeTab = document.querySelector('.tab.active').getAttribute('data-tab');
-    
-    if (activeTab === 'location-search') {
-        // Validate location input for the location search tab
-        if (!locationInput.value.trim()) {
-            locationError.textContent = 'Please enter a location';
-            isValid = false;
+        function validateForm() {
+            let isValid = true;
+            clearErrors();
+            
+            
+            const activeTab = document.querySelector('.tab.active').getAttribute('data-tab');
+            
+            if (activeTab === 'location-search') {
+                
+                if (!locationInput.value.trim()) {
+                    locationError.textContent = 'Please enter a location';
+                    isValid = false;
+                }
+            } else if (activeTab === 'coordinates') {
+              
+                const lat = parseFloat(latitudeInput.value);
+                if (isNaN(lat) || lat < -90 || lat > 90) {
+                    latitudeError.textContent = 'Latitude must be between -90 and 90';
+                    isValid = false;
+                }
+                
+                const lng = parseFloat(longitudeInput.value);
+                if (isNaN(lng) || lng < -180 || lng > 180) {
+                    longitudeError.textContent = 'Longitude must be between -180 and 180';
+                    isValid = false;
+                }
+            }
+            
+            const startDate = new Date(startDateInput.value);
+            const endDate = new Date(endDateInput.value);
+            
+            if (isNaN(startDate.getTime())) {
+                startDateError.textContent = 'Please enter a valid start date';
+                isValid = false;
+            }
+            
+            if (isNaN(endDate.getTime())) {
+                endDateError.textContent = 'Please enter a valid end date';
+                isValid = false;
+            } else if (endDate < startDate) {
+                endDateError.textContent = 'End date must be after start date';
+                isValid = false;
+            }
+            
+            
+            const oneYearInMs = 365 * 24 * 60 * 60 * 1000;
+            if (endDate - startDate > oneYearInMs) {
+                endDateError.textContent = 'Date range cannot exceed 1 year';
+                isValid = false;
+            }
+            
+            return isValid;
         }
-    } else if (activeTab === 'coordinates') {
-        // Validate latitude and longitude for the coordinates tab
-        const lat = parseFloat(latitudeInput.value);
-        if (isNaN(lat) || lat < -90 || lat > 90) {
-            latitudeError.textContent = 'Latitude must be between -90 and 90';
-            isValid = false;
-        }
-        
-        const lng = parseFloat(longitudeInput.value);
-        if (isNaN(lng) || lng < -180 || lng > 180) {
-            longitudeError.textContent = 'Longitude must be between -180 and 180';
-            isValid = false;
-        }
-    }
-    
-    // Validate dates (keep this part the same)
-    const startDate = new Date(startDateInput.value);
-    const endDate = new Date(endDateInput.value);
-    
-    if (isNaN(startDate.getTime())) {
-        startDateError.textContent = 'Please enter a valid start date';
-        isValid = false;
-    }
-    
-    if (isNaN(endDate.getTime())) {
-        endDateError.textContent = 'Please enter a valid end date';
-        isValid = false;
-    } else if (endDate < startDate) {
-        endDateError.textContent = 'End date must be after start date';
-        isValid = false;
-    }
-    
-    // Check if date range is not more than 1 year
-    const oneYearInMs = 365 * 24 * 60 * 60 * 1000;
-    if (endDate - startDate > oneYearInMs) {
-        endDateError.textContent = 'Date range cannot exceed 1 year';
-        isValid = false;
-    }
-    
-    return isValid;
-}
 
-        // Format date for NASA POWER API (YYYYMMDD)
+
         function formatDateForAPI(dateString) {
             const date = new Date(dateString);
             const year = date.getFullYear();
@@ -497,25 +667,25 @@ function validateForm() {
         async function fetchSolarIrradianceData(latitude, longitude, startDate, endDate) {
             // NASA POWER API parameters
             const parameters = [
-                'ALLSKY_SFC_SW_DWN', // All Sky Surface Shortwave Downward Irradiance
-                'ALLSKY_SFC_PAR_TOT', // Photosynthetically Active Radiation (PAR)
-                'ALLSKY_KT', // Insolation Clearness Index
-                'T2M', // Temperature at 2 Meters
-                'WS2M' // Wind Speed at 2 Meters
+                'ALLSKY_SFC_SW_DWN', 
+                'ALLSKY_SFC_PAR_TOT', 
+                'ALLSKY_KT',
+                'T2M', 
+                'WS2M' 
             ];
             
             const formattedStartDate = formatDateForAPI(startDate);
             const formattedEndDate = formatDateForAPI(endDate);
             
-            // Construct API URL
+            
             const url = `https://power.larc.nasa.gov/api/temporal/daily/point?parameters=${parameters.join(',')}&community=RE&longitude=${longitude}&latitude=${latitude}&start=${formattedStartDate}&end=${formattedEndDate}&format=JSON`;
             
             try {
-                // Show loading spinner
+            
                 spinner.style.display = 'block';
                 fetchButton.disabled = true;
                 
-                // Make the actual API request
+               
                 const response = await fetch(url);
                 
                 if (!response.ok) {
@@ -527,25 +697,23 @@ function validateForm() {
             } catch (error) {
                 throw new Error(`Failed to fetch data: ${error.message}`);
             } finally {
-                // Hide spinner
+                
                 spinner.style.display = 'none';
                 fetchButton.disabled = false;
             }
         }
 
-        // Process and organize monthly data
+      
         function processMonthlyData(parameterObj) {
             const monthlyData = {};
             
-            // Initialize monthly totals and counts
             for (let month = 1; month <= 12; month++) {
                 const monthKey = month.toString().padStart(2, '0');
                 monthlyData[monthKey] = { total: 0, count: 0 };
             }
             
-            // Sum up values by month
             for (const dateKey in parameterObj) {
-                const month = dateKey.substring(4, 6); // Extract month from YYYYMMDD
+                const month = dateKey.substring(4, 6); 
                 const value = parameterObj[dateKey];
                 
                 if (!isNaN(value)) {
@@ -554,7 +722,7 @@ function validateForm() {
                 }
             }
             
-            // Calculate averages
+            
             const monthlyAverages = {};
             for (const month in monthlyData) {
                 if (monthlyData[month].count > 0) {
@@ -563,6 +731,228 @@ function validateForm() {
             }
             
             return monthlyAverages;
+        }
+
+        
+        function getValueStatus(value, constraintType) {
+            const typeConstraints = constraints[constraintType];
+            
+            for (const status in typeConstraints) {
+                const constraint = typeConstraints[status];
+                
+                if (constraint.hasOwnProperty('min') && constraint.hasOwnProperty('max')) {
+                    if (value >= constraint.min && value < constraint.max) {
+                        return constraint;
+                    }
+                } else if (constraint.hasOwnProperty('min')) {
+                    if (value >= constraint.min) {
+                        return constraint;
+                    }
+                } else if (constraint.hasOwnProperty('max')) {
+                    if (value < constraint.max) {
+                        return constraint;
+                    }
+                }
+            }
+            
+           
+            return { label: 'Unknown', color: '#6c757d' };
+        }
+
+        
+        function createGauge(value, constraintType, min, max) {
+            const container = document.createElement('div');
+            
+            
+            const gaugeContainer = document.createElement('div');
+            gaugeContainer.className = 'gauge-container';
+            
+           
+            const gaugeFill = document.createElement('div');
+            gaugeFill.className = 'gauge-fill';
+            
+            
+            const percentage = Math.min(100, Math.max(0, ((value - min) / (max - min)) * 100));
+            gaugeFill.style.width = `${percentage}%`;
+            
+           
+            const status = getValueStatus(value, constraintType);
+            gaugeFill.style.backgroundColor = status.color;
+            
+            gaugeContainer.appendChild(gaugeFill);
+            container.appendChild(gaugeContainer);
+            
+            const gaugeMarkers = document.createElement('div');
+            gaugeMarkers.className = 'gauge-markers';
+       
+            const typeConstraints = constraints[constraintType];
+         
+            const minMarker = document.createElement('div');
+            minMarker.className = 'gauge-marker';
+            minMarker.style.left = '0%';
+            
+            const minLabel = document.createElement('div');
+            minLabel.className = 'gauge-marker-label';
+            minLabel.style.left = '0%';
+            minLabel.textContent = min;
+            
+            gaugeMarkers.appendChild(minMarker);
+            gaugeMarkers.appendChild(minLabel);
+            
+            // Add constraint threshold markers
+            for (const status in typeConstraints) {
+                const constraint = typeConstraints[status];
+                
+                if (constraint.hasOwnProperty('min') && constraint.min > min && constraint.min < max) {
+                    const percentage = ((constraint.min - min) / (max - min)) * 100;
+                    
+                    const marker = document.createElement('div');
+                    marker.className = 'gauge-marker';
+                    marker.style.left = `${percentage}%`;
+                    
+                    const label = document.createElement('div');
+                    label.className = 'gauge-marker-label';
+                    label.style.left = `${percentage}%`;
+                    label.textContent = constraint.min;
+                    
+                    gaugeMarkers.appendChild(marker);
+                    gaugeMarkers.appendChild(label);
+                }
+            }
+            
+            // Add max marker
+            const maxMarker = document.createElement('div');
+            maxMarker.className = 'gauge-marker';
+            maxMarker.style.left = '100%';
+            
+            const maxLabel = document.createElement('div');
+            maxLabel.className = 'gauge-marker-label';
+            maxLabel.style.left = '100%';
+            maxLabel.textContent = max;
+            
+            gaugeMarkers.appendChild(maxMarker);
+            gaugeMarkers.appendChild(maxLabel);
+            
+            container.appendChild(gaugeMarkers);
+            
+            return container;
+        }
+
+        // Create constraints info text
+        function createConstraintsInfo(constraintType) {
+            const container = document.createElement('div');
+            container.className = 'constraints-info';
+            
+            let infoText = '';
+            
+            switch(constraintType) {
+                case 'solarIrradiance':
+                    infoText = 'Low: <2.6 | Moderate: 2.6-3 | High: 3-4 | Optimal: >4 kWh/m²';
+                    break;
+                case 'clearnessIndex':
+                    infoText = 'Poor: <0.25 | Suboptimal: 0.25-0.5 | Optimal: 0.5-0.75 | Extreme: >0.75';
+                    break;
+                case 'temperature':
+                    infoText = 'Optimal temperature is close to 25°C';
+                    break;
+                case 'windSpeed':
+                    infoText = 'Low: <3 | Moderate: 3-6 | High: >6 m/s';
+                    break;
+            }
+            
+            container.textContent = infoText;
+            return container;
+        }
+
+        // Helper function to add a data item to the container
+        function addDataItem(container, label, value, tooltip = null) {
+            const dataItem = document.createElement('div');
+            dataItem.className = 'data-item';
+            
+            const dataLabel = document.createElement('div');
+            dataLabel.className = 'data-label';
+            
+            // Create label text
+            const labelText = document.createElement('span');
+            labelText.textContent = label;
+            dataLabel.appendChild(labelText);
+            
+            // Add info icon with tooltip if provided
+            if (tooltip) {
+                const infoIcon = document.createElement('div');
+                infoIcon.className = 'info-icon';
+                infoIcon.textContent = 'i';
+                
+                const tooltipElement = document.createElement('div');
+                tooltipElement.className = 'tooltip';
+                tooltipElement.textContent = tooltip;
+                
+                infoIcon.appendChild(tooltipElement);
+                dataLabel.appendChild(infoIcon);
+            }
+            
+            const dataValue = document.createElement('div');
+            dataValue.className = 'data-value';
+            dataValue.textContent = value;
+            
+            dataItem.appendChild(dataLabel);
+            dataItem.appendChild(dataValue);
+            container.appendChild(dataItem);
+        }
+
+        // Helper function to add a data item with status indicator and gauge
+        function addDataItemWithStatus(container, label, displayValue, value, constraintType, min, max, tooltip = null) {
+            const dataItem = document.createElement('div');
+            dataItem.className = 'data-item';
+            
+            // Create label with status badge
+            const dataLabel = document.createElement('div');
+            dataLabel.className = 'data-label';
+            
+            const labelText = document.createElement('span');
+            labelText.textContent = label;
+            dataLabel.appendChild(labelText);
+            
+            // Add info icon with tooltip if provided
+            if (tooltip) {
+                const infoIcon = document.createElement('div');
+                infoIcon.className = 'info-icon';
+                infoIcon.textContent = 'i';
+                
+                const tooltipElement = document.createElement('div');
+                tooltipElement.className = 'tooltip';
+                tooltipElement.textContent = tooltip;
+                
+                infoIcon.appendChild(tooltipElement);
+                dataLabel.appendChild(infoIcon);
+            }
+            
+            // Get status and create badge
+            const status = getValueStatus(value, constraintType);
+            const statusBadge = document.createElement('span');
+            statusBadge.className = `status-badge`;
+            statusBadge.textContent = status.label;
+            statusBadge.style.backgroundColor = status.color;
+            dataLabel.appendChild(statusBadge);
+            
+            // Create value display
+            const dataValue = document.createElement('div');
+            dataValue.className = 'data-value';
+            dataValue.textContent = displayValue;
+            
+            // Create gauge
+            const gauge = createGauge(value, constraintType, min, max);
+            
+            // Create constraints info
+            const constraintsInfo = createConstraintsInfo(constraintType);
+            
+            // Append all elements
+            dataItem.appendChild(dataLabel);
+            dataItem.appendChild(dataValue);
+            dataItem.appendChild(gauge);
+            dataItem.appendChild(constraintsInfo);
+            
+            container.appendChild(dataItem);
         }
 
         // Display Results
@@ -581,25 +971,37 @@ function validateForm() {
             const avgTemperature = calculateAverage(parameters.T2M);
             const avgWindSpeed = calculateAverage(parameters.WS2M);
             
-            // Add irradiance data items
-            addDataItem(irradianceDataContainer, 'Avg. Solar Irradiance', `${avgIrradiance.toFixed(2)} kWh/m²/day`);
-            addDataItem(irradianceDataContainer, 'Avg. PAR', `${avgPAR.toFixed(2)} MJ/m²/day`);
-            addDataItem(irradianceDataContainer, 'Avg. Clearness Index', avgClearness.toFixed(2));
-            addDataItem(irradianceDataContainer, 'Avg. Temperature', `${avgTemperature.toFixed(1)} °C`);
-            addDataItem(irradianceDataContainer, 'Avg. Wind Speed', `${avgWindSpeed.toFixed(1)} m/s`);
+            // Tooltip definitions
+            const irradianceTooltip = "Optimal Values: Regions with average daily solar irradiance of 5 kWh/m² or higher are considered excellent for solar energy projects. This value corresponds to approximately 5 Peak Sun Hours (PSH), indicating the number of equivalent hours per day when solar insolation is at its peak level of 1 kW/m².";
+            const parTooltip = "Relevance to Solar Projects: PAR measurements are more pertinent to agricultural assessments. For solar energy projects, Global Horizontal Irradiance (GHI) is the more relevant metric.";
+            const clearnessTooltip = "Optimal Values: The monthly average clearness index (Kt) typically ranges from 0.25 (very cloudy conditions) to 0.75 (very clear conditions). Values closer to 0.75 are ideal for solar projects, as they indicate clearer skies and higher solar radiation availability.";
+            const temperatureTooltip = "Optimal Conditions: Moderate temperatures are preferable. Extremely high temperatures can reduce panel efficiency, while very low temperatures can enhance performance but may introduce other operational challenges.";
+            const windSpeedTooltip = "Optimal Conditions: Locations with moderate wind speeds are ideal, balancing the cooling benefits without introducing significant structural risks.";
+            
+            // Add irradiance data items with status indicators, gauges, and tooltips
+            addDataItemWithStatus(irradianceDataContainer, 'Avg. Solar Irradiance', `${avgIrradiance.toFixed(2)} kWh/m²/day`, avgIrradiance, 'solarIrradiance', 0, 6, irradianceTooltip);
+            addDataItem(irradianceDataContainer, 'Avg. PAR', `${avgPAR.toFixed(2)} MJ/m²/day`, parTooltip);
+            addDataItemWithStatus(irradianceDataContainer, 'Avg. Clearness Index', avgClearness.toFixed(2), avgClearness, 'clearnessIndex', 0, 1, clearnessTooltip);
+            addDataItemWithStatus(irradianceDataContainer, 'Avg. Temperature', `${avgTemperature.toFixed(1)} °C`, avgTemperature, 'temperature', 0, 40, temperatureTooltip);
+            addDataItemWithStatus(irradianceDataContainer, 'Avg. Wind Speed', `${avgWindSpeed.toFixed(1)} m/s`, avgWindSpeed, 'windSpeed', 0, 10, windSpeedTooltip);
             
             // Process monthly data
             const monthlyIrradiance = processMonthlyData(parameters.ALLSKY_SFC_SW_DWN);
             
-            // Add monthly data for irradiance
+            // Add monthly data for irradiance (without tooltips for monthly data)
             const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
             monthNames.forEach((monthName, index) => {
                 const monthKey = (index + 1).toString().padStart(2, '0');
                 if (monthlyIrradiance[monthKey]) {
-                    addDataItem(
+                    const value = monthlyIrradiance[monthKey];
+                    addDataItemWithStatus(
                         irradianceDataContainer, 
                         `${monthName} Irradiance`, 
-                        `${monthlyIrradiance[monthKey].toFixed(2)} kWh/m²/day`
+                        `${value.toFixed(2)} kWh/m²/day`,
+                        value,
+                        'solarIrradiance',
+                        0,
+                        6
                     );
                 }
             });
@@ -608,8 +1010,8 @@ function validateForm() {
             if (locationName) {
                 addDataItem(locationDataContainer, 'Location', locationName);
             }
-            addDataItem(locationDataContainer, 'Latitude', `${parseFloat(latitude).toFixed(6)}°`);
-            addDataItem(locationDataContainer, 'Longitude', `${parseFloat(longitude).toFixed(6)}°`);
+            addDataItem(locationDataContainer, 'Latitude', `${Number.parseFloat(latitude).toFixed(6)}°`);
+            addDataItem(locationDataContainer, 'Longitude', `${Number.parseFloat(longitude).toFixed(6)}°`);
             
             // Format dates for display
             const formattedStartDate = new Date(startDate).toLocaleDateString();
@@ -626,24 +1028,6 @@ function validateForm() {
         function calculateAverage(parameterObj) {
             const values = Object.values(parameterObj).filter(value => !isNaN(value));
             return values.length > 0 ? values.reduce((sum, value) => sum + value, 0) / values.length : 0;
-        }
-
-        // Helper function to add a data item to the container
-        function addDataItem(container, label, value) {
-            const dataItem = document.createElement('div');
-            dataItem.className = 'data-item';
-            
-            const dataLabel = document.createElement('div');
-            dataLabel.className = 'data-label';
-            dataLabel.textContent = label;
-            
-            const dataValue = document.createElement('div');
-            dataValue.className = 'data-value';
-            dataValue.textContent = value;
-            
-            dataItem.appendChild(dataLabel);
-            dataItem.appendChild(dataValue);
-            container.appendChild(dataItem);
         }
 
         // Location input event handler - geocode on blur
@@ -685,7 +1069,7 @@ function validateForm() {
                     
                     // Check if we already have coordinates from the blur event
                     if (coordinatesDisplay.classList.contains('visible')) {
-                        latitude = parseFloat(displayLat.textContent);
+                        latitude = Number.parseFloat(displayLat.textContent);
                         longitude = parseFloat(displayLng.textContent);
                         locationName = location;
                     } else {
@@ -702,7 +1086,7 @@ function validateForm() {
                     }
                 } else {
                     // Get coordinates directly from inputs
-                    latitude = parseFloat(latitudeInput.value.trim());
+                    latitude = Number.parseFloat(latitudeInput.value.trim());
                     longitude = parseFloat(longitudeInput.value.trim());
                 }
                 
